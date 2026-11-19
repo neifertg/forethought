@@ -1,0 +1,41 @@
+# forethought merge gate. Any CI works the same way: run the BASE branch's copy of forethought against the PR.
+# Make it count: protect your main branch so this check must pass and nobody pushes to main directly.
+name: forethought
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}   # the code that was reviewed, not a merge preview
+          fetch-depth: 0                                   # the gate diffs against the base branch
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The rules come from the base branch, so a PR can't change the rules it is judged by.
+      # (First PR that adds forethought: there are no base rules yet, so it uses its own.)
+      - name: Load the base branch's rules
+        run: |
+          mkdir -p "$RUNNER_TEMP/rules/forethought"
+          if ! git archive "origin/${{ github.base_ref }}:./forethought" | tar -x -C "$RUNNER_TEMP/rules/forethought"; then
+            cp -r forethought/. "$RUNNER_TEMP/rules/forethought/"
+          fi
+
+      - name: Change is planned, finished, reviewed on this exact code, and in budget
+        env:
+          FORETHOUGHT_ROOT: ${{ github.workspace }}
+          FORETHOUGHT_BRANCH: ${{ github.head_ref }}
+          # Changes to forethought's own rules need a human: add the 'governance-approved' label to the PR.
+          FORETHOUGHT_ALLOW_GOVERNANCE: ${{ contains(github.event.pull_request.labels.*.name, 'governance-approved') }}
+        run: python "$RUNNER_TEMP/rules/forethought/cli.py" gate --ci --base origin/${{ github.base_ref }}
+
+      # Add your own build and tests here, e.g.
+      # - name: Tests
+      #   run: npm ci && npm test

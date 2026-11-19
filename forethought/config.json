@@ -1,0 +1,20 @@
+{
+  "agent_cmd": "",
+  "base_branch": "",
+  "plan_max_lines": 80,
+  "scope_mode": "warn",
+  "quick_max_files": 3,
+  "pr_max_lines": 400,
+  "pr_size_mode": "warn",
+  "review_max_chars": 150000,
+  "max_in_progress": 3,
+  "stale_days": 30,
+  "parked_stale_days": 60,
+  "feature_dirs": ["src/features/*", "features/*", "apps/*", "packages/*", "services/*", "modules/*"],
+  "planning_paths": ["changes/**", "GOALS.md", "ROADMAP.md", "LESSONS.md", "AGENTS.md", "CLAUDE.md", "README.md", "**/README.md", "docs/**", "research/**/*.md"],
+  "governance_paths": ["forethought/**", ".claude/**", ".github/**", ".gitignore"],
+  "keep_branches": ["main", "master", "develop", "dev", "staging", "production", "release/*", "hotfix/*"],
+  "tidy_ignore": ["tests/**", "test/**", "scripts/**", "infra/**", "tools/**", ".github/**"],
+  "schema_paths": ["**/migrations/**", "**/schema.prisma", "**/schema.sql", "**/*.sql", "**/models.py", "**/models/**"],
+  "test_paths": ["tests/**", "test/**", "**/__tests__/**", "**/*.test.*", "**/*.spec.*", "**/test_*.py", "**/*_test.*"]
+}
