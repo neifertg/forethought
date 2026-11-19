@@ -11,7 +11,7 @@ forethought is a small harness for complicated projects built with AI coding age
 ## Quick start
 
 ```sh
-git clone https://github.com/<you>/forethought
+git clone https://github.com/neifertg/forethought
 python forethought/forethought/cli.py init path/to/your-project            # any agent
 python forethought/forethought/cli.py init path/to/your-project --claude   # + Claude Code skills and edit-time hook
 python forethought/forethought/cli.py init path/to/your-project --owner @you   # + CODEOWNERS: only you approve rule changes
