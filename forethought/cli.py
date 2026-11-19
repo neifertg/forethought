@@ -976,11 +976,17 @@ TOOL_NOISE = ("forethought/__pycache__/**", "forethought/gate-log.jsonl", "foret
 def code_only(files):
     cfg = config()
     return [f for f in files if not matches(f, cfg["planning_paths"]) and not matches(f, TOOL_NOISE)
-            and not matches(f, cfg["governance_paths"])]
+            and not is_governance(f)]
+
+
+def is_governance(f):
+    # case-insensitive: on Windows and macOS ".Claude/settings.local.json" IS ".claude/settings.local.json"
+    pats = [p.lower() for p in config()["governance_paths"]]
+    return matches(f.lower(), pats) and not matches(f, TOOL_NOISE)
 
 
 def governance_only(files):
-    return [f for f in files if matches(f, config()["governance_paths"]) and not matches(f, TOOL_NOISE)]
+    return [f for f in files if is_governance(f)]
 
 
 GOVERNANCE_WARNING = ("governance files changed (%s). They set the rules every agent follows; make sure a "
@@ -1006,7 +1012,8 @@ def governance_allowed():
         when = datetime.datetime.fromisoformat(read(tok).strip())
     except ValueError:
         return False
-    return (datetime.datetime.now() - when).total_seconds() < GOVERNANCE_MINUTES * 60
+    age = (datetime.datetime.now() - when).total_seconds()
+    return 0 <= age < GOVERNANCE_MINUTES * 60  # a token from the future is not a token
 
 
 def cmd_allow_governance(a):
@@ -1149,11 +1156,17 @@ def cmd_gate(a):
     if a.paths:
         files = []
         for p in a.paths:
-            full = (Path(p) if Path(p).is_absolute() else ROOT / p).resolve()
+            # abspath/normpath, not resolve(): Windows normalizes "dir /x" and "\\?\" spellings to the real path,
+            # so they can't slip past as "outside the project"
+            full = os.path.abspath(p if os.path.isabs(p) else os.path.join(str(ROOT), p))
             try:
-                files.append(full.relative_to(ROOT.resolve()).as_posix())
-            except ValueError:
+                rel = os.path.relpath(full, os.path.abspath(str(ROOT)))
+            except ValueError:  # another drive
+                rel = ".."
+            if rel == ".." or rel.startswith(".." + os.sep) or rel.startswith("../"):
                 print("gate: %s is outside the project; not checked" % p, file=sys.stderr)
+            else:
+                files.append(rel.replace(os.sep, "/"))
         mode = "paths"
     else:
         if not in_git():

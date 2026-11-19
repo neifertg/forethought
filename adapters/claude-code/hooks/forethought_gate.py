@@ -19,7 +19,8 @@ def main():
         return 0
     tool_input = event.get("tool_input") or {}
     path = tool_input.get("file_path") or tool_input.get("notebook_path")
-    root = event.get("cwd") or os.getcwd()
+    # the project root, not the session's current folder (which follows `cd`)
+    root = os.environ.get("CLAUDE_PROJECT_DIR") or event.get("cwd") or os.getcwd()
     if not path or not os.path.isdir(os.path.join(root, "forethought")):
         return 0
     try:

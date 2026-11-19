@@ -333,8 +333,25 @@ class GateTest(unittest.TestCase):
     # --- Claude Code adapter hook ---
     def run_hook(self, rel):
         event = {"tool_name": "Write", "tool_input": {"file_path": str(self.root / rel)}, "cwd": str(self.root)}
+        env = dict(__import__("os").environ, CLAUDE_PROJECT_DIR=str(self.root))  # as Claude Code sets it
         return subprocess.run([sys.executable, str(self.root / ".claude" / "hooks" / "forethought_gate.py")],
-                              input=json.dumps(event), capture_output=True, text=True, cwd=str(self.root))
+                              input=json.dumps(event), capture_output=True, text=True, cwd=str(self.root), env=env)
+
+    def test_claude_hook_uses_project_dir_not_the_session_folder(self):
+        event = {"tool_name": "Write", "tool_input": {"file_path": str(self.root / ".claude" / "settings.local.json")},
+                 "cwd": str(self.root / "src")}  # the session cd'd into a subfolder
+        env = dict(__import__("os").environ, CLAUDE_PROJECT_DIR=str(self.root))
+        r = subprocess.run([sys.executable, str(self.root / ".claude" / "hooks" / "forethought_gate.py")],
+                           input=json.dumps(event), capture_output=True, text=True, cwd=str(self.root), env=env)
+        self.assertEqual(r.returncode, 2, r.stderr)
+
+    def test_gate_paths_odd_spellings_and_case_are_still_governance(self):
+        for p in (".Claude/settings.local.json", ".claude /settings.local.json", "src/../.CLAUDE/x.json"):
+            r = self.ft("gate", "--paths", p)
+            self.assertEqual(r.returncode, 1, "%s: %s" % (p, r.stderr))
+        tok = self.root / ".git" / "forethought-governance-ok"
+        tok.write_text("2099-01-01T00:00:00\n", encoding="utf-8")  # a token from the future
+        self.assertEqual(self.ft("gate", "--paths", ".claude/x.json").returncode, 1)
 
     def test_claude_edit_hook_blocks_code_before_a_plan(self):
         self.assertTrue((self.root / ".claude" / "settings.json").exists())
