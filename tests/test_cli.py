@@ -1,4 +1,4 @@
-"""Behavior tests: install forethought into a temp project and drive the CLI like a user or agent would."""
+"""Behavior tests: install capitan into a temp project and drive the CLI like a user or agent would."""
 import json
 import re
 import subprocess
@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parents[1] / "forethought" / "cli.py"
+SRC = Path(__file__).resolve().parents[1] / "capitan" / "cli.py"
 
 GOALS = """# Goals
 ## Objectives
@@ -35,14 +35,14 @@ def filled_plan(cid, objective="O1", criteria=None, extra_lines=0, title="Order 
             % (title, json.dumps(data, indent=2), body))
 
 
-class ForethoughtTest(unittest.TestCase):
+class CapitanTest(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.root = Path(self._tmp.name) / "proj"
         r = subprocess.run([sys.executable, str(SRC), "init", str(self.root), "--claude"],
                            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.cmd = [sys.executable, "-m", "forethought"]
+        self.cmd = [sys.executable, "-m", "capitan"]
 
     def tearDown(self):
         self._tmp.cleanup()
@@ -62,13 +62,13 @@ class ForethoughtTest(unittest.TestCase):
     def set_agent(self, verdict):
         fake = self.root / ("fake_%s.py" % verdict)
         fake.write_text(FAKE_AGENT % verdict, encoding="utf-8")
-        (self.root / "forethought" / "config.json").write_text(json.dumps(
+        (self.root / "capitan" / "config.json").write_text(json.dumps(
             {"plan_max_lines": 80, "agent_cmd": '"%s" "%s"' % (sys.executable, fake)}), encoding="utf-8")
 
     # --- install ---
     def test_init_installs_files_and_never_overwrites(self):
         for f in ("AGENTS.md", "GOALS.md", "ROADMAP.md", "LESSONS.md", "docs/data-model.md",
-                  "forethought/cli.py", "forethought/playbooks/critique.md", ".claude/skills/forethought-plan/SKILL.md"):
+                  "capitan/cli.py", "capitan/playbooks/critique.md", ".claude/skills/capitan-plan/SKILL.md"):
             self.assertTrue((self.root / f).exists(), f)
         self.assertIn("@AGENTS.md", (self.root / "CLAUDE.md").read_text(encoding="utf-8"))
         self.goals()
@@ -398,7 +398,7 @@ class ForethoughtTest(unittest.TestCase):
         r = self.run_cli("park", "Add coupon codes", "--from", "001-order-checkout")
         self.assertEqual(r.returncode, 0, r.stderr)
         text = (self.root / "ROADMAP.md").read_text(encoding="utf-8")
-        lot = text.split("<!-- forethought:parking:start -->")[1].split("<!-- forethought:parking:end -->")[0]
+        lot = text.split("<!-- capitan:parking:start -->")[1].split("<!-- capitan:parking:end -->")[0]
         self.assertIn("Add coupon codes (from 001-order-checkout)", lot)
 
 

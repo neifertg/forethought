@@ -2,7 +2,7 @@
 
 Run this once at the start of a project (and again whenever the project's direction changes). An agent interviews the human; the human answers. The output is the project's foundation: `GOALS.md`, a first `docs/data-model.md`, the project section of `AGENTS.md`, research questions, and the first epics.
 
-Everything later in forethought checks work against what this interview produces, so the quality of these answers sets the ceiling for the whole project. Garbage in, garbage out: your job as the interviewer is to keep garbage out.
+Everything later in capitan checks work against what this interview produces, so the quality of these answers sets the ceiling for the whole project. Garbage in, garbage out: your job as the interviewer is to keep garbage out.
 
 ## How to interview
 
@@ -48,7 +48,7 @@ Everything later in forethought checks work against what this interview produces
 
 ### 7. Unknowns (becomes `research/`)
 - What don't we know yet that could change the plan? (A technology choice, a vendor's limits, a legal question, whether users want X.)
-- For each: the one question, which objective it serves, and how much time it deserves. Each becomes `forethought research "<topic>"`.
+- For each: the one question, which objective it serves, and how much time it deserves. Each becomes `capitan research "<topic>"`.
 
 ### 8. How we work (becomes the `## Project` section of `AGENTS.md`)
 - Stack: language, framework, database, hosting. Commands to install, run, test, lint, build.
@@ -61,15 +61,15 @@ Everything later in forethought checks work against what this interview produces
 1. `GOALS.md`: objectives (`- **O1**: <outcome>. Signal: <how we'll know>`), current milestone, non-goals, constraints.
 2. `docs/data-model.md`: entities and relationships diagram, invariants table (`INV-1`...), open data questions.
 3. `AGENTS.md`: a `## Project` section at the top with stack, commands, testing approach and project-specific rules.
-4. `forethought/config.json`: `agent_cmd`, `scope_mode`, `max_in_progress`, `feature_dirs`, `base_branch` if not detected.
-5. For each open question: `python -m forethought research "<topic>"`, with its question and objective filled in.
-6. For each first-milestone feature: `python -m forethought new "<feature>" --tier epic --objective O<n>`, with `children` and `depends_on` filled in from round 6. Ideas outside the milestone: `python -m forethought park "<idea>"`.
-7. Run `python -m forethought check` and `python -m forethought map`.
+4. `capitan/config.json`: `agent_cmd`, `scope_mode`, `max_in_progress`, `feature_dirs`, `base_branch` if not detected.
+5. For each open question: `python -m capitan research "<topic>"`, with its question and objective filled in.
+6. For each first-milestone feature: `python -m capitan new "<feature>" --tier epic --objective O<n>`, with `children` and `depends_on` filled in from round 6. Ideas outside the milestone: `python -m capitan park "<idea>"`.
+7. Run `python -m capitan check` and `python -m capitan map`.
 
 ## Finish
 
-Show the human a one-screen summary: objectives with signals, milestone and date, non-goals, the epics in order, the research questions, and anything still open. Tell them the next step: critique and approve the first epic (`python -m forethought critique <id>`, then `approve`), and start research that blocks it.
+Show the human a one-screen summary: objectives with signals, milestone and date, non-goals, the epics in order, the research questions, and anything still open. Tell them the next step: critique and approve the first epic (`python -m capitan critique <id>`, then `approve`), and start research that blocks it.
 
 Commit these files to the base branch. They are the project's foundation, not work in progress.
 
-`forethought/config.json` is governance: it sets the rules agents follow, so agents can't change it alone. Before step 4, ask the human to run `python -m forethought allow-governance` (valid 30 minutes), or show them the config values and let them make the edit. The commit then warns that governance files changed; that is expected.
+`capitan/config.json` is governance: it sets the rules agents follow, so agents can't change it alone. Before step 4, ask the human to run `python -m capitan allow-governance` (valid 30 minutes), or show them the config values and let them make the edit. The commit then warns that governance files changed; that is expected.

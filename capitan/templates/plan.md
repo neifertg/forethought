@@ -28,7 +28,7 @@ TODO: beyond the per-criterion tests above: integration/end-to-end checks, how t
 TODO: what could go wrong or be harder than it looks, and the cheapest early signal for each.
 
 ## Out of scope
-TODO: tempting related work that is NOT part of this change. Each item goes to the parking lot (python -m forethought park "...").
+TODO: tempting related work that is NOT part of this change. Each item goes to the parking lot (python -m capitan park "...").
 
 ## Relevant lessons
 __LESSONS__

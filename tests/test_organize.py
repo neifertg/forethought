@@ -29,7 +29,7 @@ class _Base(unittest.TestCase):
         return subprocess.run(["git"] + list(args), cwd=str(self.root), capture_output=True, text=True, encoding="utf-8")
 
     def ft(self, *args):
-        return subprocess.run([sys.executable, "-m", "forethought"] + list(args), cwd=str(self.root),
+        return subprocess.run([sys.executable, "-m", "capitan"] + list(args), cwd=str(self.root),
                               capture_output=True, text=True, encoding="utf-8")
 
     def put(self, rel, text="x = 1\n"):
@@ -193,8 +193,8 @@ class OrganizeTest(_Base):
         self.ft("learn", "Invoice totals drift after refunds", "--area", "billing", "--body", "b")
         old = (datetime.date.today() - datetime.timedelta(days=90)).isoformat()
         rm = self.root / "ROADMAP.md"
-        rm.write_text(rm.read_text(encoding="utf-8").replace("<!-- forethought:parking:end -->",
-                                                             "- %s Dark mode\n<!-- forethought:parking:end -->" % old), encoding="utf-8")
+        rm.write_text(rm.read_text(encoding="utf-8").replace("<!-- capitan:parking:end -->",
+                                                             "- %s Dark mode\n<!-- capitan:parking:end -->" % old), encoding="utf-8")
         self.put("legacy/old.py")
         out = self.ft("tidy").stdout
         self.assertIn("L-001 and L-002 look like the same lesson", out)
@@ -285,7 +285,7 @@ class BranchSafetyTest(_Base):
         self.assertNotIn("RESCUE FIRST", out)
         self.ft("branches", "--prune", "--yes")
         self.assertNotEqual(self.git("rev-parse", "--verify", "--quiet", "change/" + d.name).returncode, 0)
-        self.assertTrue((self.root / "forethought" / "cache.json").exists())
+        self.assertTrue((self.root / "capitan" / "cache.json").exists())
 
     def test_long_lived_branches_are_never_pruned(self):
         self.git("branch", "develop")
@@ -343,7 +343,7 @@ class BranchSafetyTest(_Base):
     def test_cache_of_wrong_shape_is_rebuilt_not_fatal(self):
         self.git("branch", "side")
         for junk in ("[]", "\"x\"", "{\"side\": \"str\"}", "{not json"):
-            (self.root / "forethought" / "cache.json").write_text(junk, encoding="utf-8")
+            (self.root / "capitan" / "cache.json").write_text(junk, encoding="utf-8")
             r = self.ft("branches")
             self.assertEqual(r.returncode, 0, "%s: %s" % (junk, r.stderr))
             self.assertNotIn("Traceback", r.stderr)
@@ -354,7 +354,7 @@ class BranchSafetyTest(_Base):
         self.commit("notes")
         self.git("switch", "-q", "main")
         self.assertIn("no change: what is this branch for?", self.ft("branches").stdout)
-        cfg = self.root / "forethought" / "config.json"
+        cfg = self.root / "capitan" / "config.json"
         data = json.loads(cfg.read_text(encoding="utf-8"))
         data["planning_paths"].append("notes/**")
         cfg.write_text(json.dumps(data), encoding="utf-8")
@@ -383,16 +383,16 @@ class BranchSafetyTest(_Base):
         self.assertEqual(r.returncode, 0, r.stderr)
         g = lambda *a: subprocess.run(["git"] + list(a), cwd=str(fresh), capture_output=True, text=True, encoding="utf-8")
         g("init", "-q", "-b", "main"); g("config", "user.email", "t@e"); g("config", "user.name", "t")
-        h = subprocess.run([sys.executable, "-m", "forethought", "hooks"], cwd=str(fresh), capture_output=True, text=True)
+        h = subprocess.run([sys.executable, "-m", "capitan", "hooks"], cwd=str(fresh), capture_output=True, text=True)
         self.assertEqual(h.returncode, 0, h.stderr)
         g("add", "-A")
-        c = g("commit", "-q", "-m", "add forethought")  # hooks installed first, as the docs say
+        c = g("commit", "-q", "-m", "add capitan")  # hooks installed first, as the docs say
         self.assertEqual(c.returncode, 0, c.stderr + c.stdout)
         self.assertIn("governance files changed", c.stderr + c.stdout)
 
     def test_kickoff_config_change_commits_on_main_with_a_warning(self):
         self.ft("hooks")
-        cfg = self.root / "forethought" / "config.json"
+        cfg = self.root / "capitan" / "config.json"
         data = json.loads(cfg.read_text(encoding="utf-8"))
         data["agent_cmd"] = "claude -p"
         cfg.write_text(json.dumps(data), encoding="utf-8")
@@ -403,7 +403,7 @@ class BranchSafetyTest(_Base):
         self.assertEqual(self.ft("allow-governance").returncode, 0)  # the human says yes
         c = self.git("commit", "-q", "-m", "kickoff results")
         self.assertEqual(c.returncode, 0, c.stderr + c.stdout)
-        self.assertIn("governance files changed (forethought/config.json)", c.stderr + c.stdout)
+        self.assertIn("governance files changed (capitan/config.json)", c.stderr + c.stdout)
 
     def test_changed_value_that_exists_elsewhere_on_main_stays_at_risk(self):
         self.put("docs/db.md", "## Decision\n- Use Postgres\n\n## Rejected\n- Use Mongo\n")
@@ -433,7 +433,7 @@ class BranchSafetyTest(_Base):
     # --- round 4: the rules can't be weakened by the change they judge ---
     def test_staged_edit_to_the_gate_cannot_switch_it_off(self):
         self.ft("hooks")
-        cli = self.root / "forethought" / "cli.py"
+        cli = self.root / "capitan" / "cli.py"
         src = cli.read_text(encoding="utf-8")
         cli.write_text(src.replace("def gate_eval(files, ci=False, base=None, statuses=None):",
                                    "def gate_eval(files, ci=False, base=None, statuses=None):\n    return None, [], []\n\n\n"
@@ -447,7 +447,7 @@ class BranchSafetyTest(_Base):
 
     def test_ci_blocks_rule_changes_without_the_human_label(self):
         d = self.started_branch()
-        cfg = self.root / "forethought" / "config.json"
+        cfg = self.root / "capitan" / "config.json"
         data = json.loads(cfg.read_text(encoding="utf-8"))
         data["planning_paths"].append("src/**")
         cfg.write_text(json.dumps(data), encoding="utf-8")
@@ -464,7 +464,7 @@ class BranchSafetyTest(_Base):
         (d / "plan.md").write_text(t, encoding="utf-8")
         self.ft("review", d.name, "--print")
         (d / "review.md").write_text("VERDICT: PASS\nAC-1: PASS\n", encoding="utf-8")
-        cfg = self.root / "forethought" / "config.json"
+        cfg = self.root / "capitan" / "config.json"
         cfg.write_text(cfg.read_text(encoding="utf-8").replace('"scope_mode": "warn"', '"scope_mode": "block"'), encoding="utf-8")
         r = self.ft("finish", d.name, "--no-lessons", "t")
         self.assertIn("changed after the review", r.stderr)
@@ -481,7 +481,7 @@ class BranchSafetyTest(_Base):
                            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(r.returncode, 0, r.stderr)
         owners = (fresh / ".github" / "CODEOWNERS").read_text(encoding="utf-8")
-        for path in ("/forethought/", "/.github/", "/.claude/", "/.gitignore"):
+        for path in ("/capitan/", "/.github/", "/.claude/", "/.gitignore"):
             self.assertIn("%s @octo-cat" % path, owners)
         r = subprocess.run([sys.executable, str(SRC), "init", str(fresh / "plain")], capture_output=True, text=True, encoding="utf-8")
         self.assertIn("--owner", r.stdout)

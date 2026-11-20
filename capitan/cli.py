@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""forethought: plan-first project harness. Works with any coding agent or none.
+"""capitan: plan-first project harness. Works with any coding agent or none.
 
 Python 3.8+, standard library only. Run from the project root:
-    python -m forethought <command> ...
+    python -m capitan <command> ...
 
 Plan
   new "<title>" --tier T [...]   start a change: quick | standard | epic
@@ -20,7 +20,7 @@ Build
 Enforce
   gate [--staged|--ci|--paths] [--base B]   plan gate + scope guard (git hook, CI, agent hooks)
   hooks                          install the git pre-commit gate
-  allow-governance               HUMAN ONLY: allow changes to forethought's own rules for 30 minutes
+  allow-governance               HUMAN ONLY: allow changes to capitan's own rules for 30 minutes
 Remember
   learn "<title>" --area a,b --body "..." [--general]   record a lesson (--general: true beyond this project)
   recall <terms...>              search past lessons
@@ -34,7 +34,7 @@ Stay organized
   map                            regenerate docs/map.md: features, folders, open changes
   tidy                           report what is drifting: missing READMEs, unclaimed code, stale work, branches
 Setup
-  init <dir> [--claude]          install into a project (run from the forethought source repo)
+  init <dir> [--claude]          install into a project (run from the capitan source repo)
 """
 import argparse
 import datetime
@@ -47,10 +47,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent          # <project>/forethought  (or <source repo>/forethought)
-# project root. FORETHOUGHT_ROOT lets a copy of the rules from the base branch (CI) or the last commit
+HERE = Path(__file__).resolve().parent          # <project>/capitan  (or <source repo>/capitan)
+# project root. CAPITAN_ROOT lets a copy of the rules from the base branch (CI) or the last commit
 # (pre-commit) judge the working tree, so a change can never edit the rules it is judged by.
-ROOT = Path(os.environ["FORETHOUGHT_ROOT"]).resolve() if os.environ.get("FORETHOUGHT_ROOT") else HERE.parent
+ROOT = Path(os.environ["CAPITAN_ROOT"]).resolve() if os.environ.get("CAPITAN_ROOT") else HERE.parent
 TIERS = ("quick", "standard", "epic")
 STATUSES = ("draft", "approved", "in-progress", "done", "dropped")
 OPEN = ("draft", "approved", "in-progress")
@@ -69,7 +69,7 @@ def today():
 
 
 def die(msg, code=1):
-    print("forethought: " + msg, file=sys.stderr)
+    print("capitan: " + msg, file=sys.stderr)
     sys.exit(code)
 
 
@@ -90,7 +90,7 @@ DEFAULTS = {
     "planning_paths": ["changes/**", "GOALS.md", "ROADMAP.md", "LESSONS.md", "AGENTS.md", "CLAUDE.md",
                        "README.md", "**/README.md", "docs/**", "research/**/*.md"],
     # the rules themselves: no change needed (setup and kickoff commit them), but every change is flagged loudly
-    "governance_paths": ["forethought/**", ".claude/**", ".github/**", ".gitignore"],
+    "governance_paths": ["capitan/**", ".claude/**", ".github/**", ".gitignore"],
     # never pruned, never treated as a change branch
     "keep_branches": ["main", "master", "develop", "dev", "staging", "production", "release/*", "hotfix/*"],
     # tidy doesn't ask "which plan claimed this?" about these (tests, scripts, infra usually predate plans)
@@ -342,7 +342,7 @@ def check_plan(d):
 def drift(d, data):
     """An approved plan is a contract: editing it afterwards needs a revise and a new approval."""
     if data.get("status") in ("approved", "in-progress") and data.get("approved_hash") != plan_hash(d):
-        return ["the plan changed after approval. To change it: python -m forethought revise %s "
+        return ["the plan changed after approval. To change it: python -m capitan revise %s "
                 "(back to draft, then critique and approve again)" % d.name]
     return []
 
@@ -402,7 +402,7 @@ def refresh_roadmap():
         if len(closed_rows) > keep:
             rows += ["", "%d older closed changes are in `changes/` (and git history)." % (len(closed_rows) - keep)]
     text = read(p)
-    new = re.sub(r"(<!-- forethought:changes:start -->).*?(<!-- forethought:changes:end -->)",
+    new = re.sub(r"(<!-- capitan:changes:start -->).*?(<!-- capitan:changes:end -->)",
                  lambda m: m.group(1) + "\n" + "\n".join(rows) + "\n" + m.group(2), text, flags=re.S)
     if new != text:
         write(p, new)
@@ -413,7 +413,7 @@ def refresh_roadmap():
 def cmd_init(a):
     src_project = HERE.parent / "project"
     if not src_project.exists():
-        die("init runs from the forethought source repo, not from an installed copy")
+        die("init runs from the capitan source repo, not from an installed copy")
     target = Path(a.dir).resolve()
     target.mkdir(parents=True, exist_ok=True)
     made, kept = [], []
@@ -428,7 +428,7 @@ def cmd_init(a):
 
     for f in sorted(HERE.rglob("*")):
         if f.is_file() and "__pycache__" not in f.parts:
-            place(f, target / "forethought" / f.relative_to(HERE))
+            place(f, target / "capitan" / f.relative_to(HERE))
     for f in sorted(src_project.rglob("*")):
         if f.is_file():
             place(f, target / f.relative_to(src_project))
@@ -437,7 +437,7 @@ def cmd_init(a):
         for f in sorted((adapter / "skills").rglob("*")):
             if f.is_file():
                 place(f, target / ".claude" / "skills" / f.relative_to(adapter / "skills"))
-        place(adapter / "hooks" / "forethought_gate.py", target / ".claude" / "hooks" / "forethought_gate.py")
+        place(adapter / "hooks" / "capitan_gate.py", target / ".claude" / "hooks" / "capitan_gate.py")
         st = target / ".claude" / "settings.json"
         if st.exists():
             kept.append(".claude/settings.json (merge the PreToolUse hook from adapters/claude-code/settings.json "
@@ -449,9 +449,9 @@ def cmd_init(a):
             write(cm, "@AGENTS.md\n")
             made.append("CLAUDE.md")
         elif "@AGENTS.md" not in read(cm):
-            kept.append("CLAUDE.md (add a line '@AGENTS.md' so Claude Code loads the forethought rules)")
+            kept.append("CLAUDE.md (add a line '@AGENTS.md' so Claude Code loads the capitan rules)")
     gi = target / ".gitignore"
-    for line in ("forethought/gate-log.jsonl", "forethought/cache.json", "forethought/__pycache__/"):
+    for line in ("capitan/gate-log.jsonl", "capitan/cache.json", "capitan/__pycache__/"):
         if not gi.exists() or line not in read(gi):
             write(gi, (read(gi).rstrip("\n") + "\n" if gi.exists() else "") + line + "\n")
             made.append(".gitignore (+ %s)" % line)
@@ -460,11 +460,11 @@ def cmd_init(a):
         # GitHub runs a PR's own copy of the workflow, so only code-owner review stops a PR from rewriting the
         # gate. With "Require review from Code Owners" on, only this owner can approve rule changes.
         owner = a.owner if a.owner.startswith("@") else "@" + a.owner
-        rules = "".join("%s %s\n" % (p, owner) for p in ("/forethought/", "/.github/", "/.claude/", "/.gitignore"))
+        rules = "".join("%s %s\n" % (p, owner) for p in ("/capitan/", "/.github/", "/.claude/", "/.gitignore"))
         if owners.exists():
             kept.append(".github/CODEOWNERS (add these lines yourself:\n%s)" % rules.rstrip())
         else:
-            write(owners, "# Changes to forethought's rules need review from:\n" + rules)
+            write(owners, "# Changes to capitan's rules need review from:\n" + rules)
             made.append(".github/CODEOWNERS (rule changes need %s's review)" % owner)
     for m in made:
         print("  created  " + m)
@@ -473,10 +473,10 @@ def cmd_init(a):
     if not a.owner and not owners.exists():
         print("Tip: init --owner @you writes .github/CODEOWNERS so only you can approve changes to the rules "
               "(then turn on 'Require review from Code Owners' in branch protection).")
-    print("Next: in a git repo run: python -m forethought hooks\n"
+    print("Next: in a git repo run: python -m capitan hooks\n"
           "Then start a fresh agent session and ask it to run the kickoff interview "
-          "(forethought/playbooks/kickoff.md; Claude Code: the forethought-kickoff skill).\n"
-          "Lifecycle guide: docs/WORKFLOW.md in the forethought repo.")
+          "(capitan/playbooks/kickoff.md; Claude Code: the capitan-kickoff skill).\n"
+          "Lifecycle guide: docs/WORKFLOW.md in the capitan repo.")
 
 
 def cmd_new(a):
@@ -511,7 +511,7 @@ def cmd_new(a):
             die("created changes/%s/plan.md as DRAFT. A quick change needs --intent and --done-check; "
                 "fill both in the json block, then ask the human to approve it." % cid)
         # Even a quick change needs a human yes (no critique, though), so an agent can never approve its own work.
-        print("created changes/%s/plan.md (quick). Ask the human to run: python -m forethought approve %s" % (cid, cid))
+        print("created changes/%s/plan.md (quick). Ask the human to run: python -m capitan approve %s" % (cid, cid))
     else:
         tpl = read(HERE / "templates" / ("plan.md" if a.tier == "standard" else "epic.md"))
         terms = terms_from(a.title, " ".join(areas))
@@ -527,7 +527,7 @@ def cmd_new(a):
         write(d / name, text)
         save_plan(d / name, text, data)
         print("created changes/%s/%s" % (cid, name))
-        print("Fill every TODO, then: python -m forethought check %s" % cid)
+        print("Fill every TODO, then: python -m capitan check %s" % cid)
     refresh_roadmap()
 
 
@@ -614,7 +614,7 @@ def cmd_critique(a):
     if a.print or not cmd:
         print(prompt)
         if not a.print:
-            print("\n[forethought] No agent_cmd in forethought/config.json. Give the prompt above to a FRESH agent session "
+            print("\n[capitan] No agent_cmd in capitan/config.json. Give the prompt above to a FRESH agent session "
                   "and save its reply to changes/%s/critique.md" % d.name, file=sys.stderr)
         return
     r = subprocess.run(cmd, shell=True, input=prompt, capture_output=True, text=True, encoding="utf-8")
@@ -643,7 +643,7 @@ def cmd_approve(a):
     if data["tier"] != "quick" and not a.skip_critique:
         crit = d / "critique.md"
         if not crit.exists():
-            die("no critique yet. Run: python -m forethought critique %s  (or --skip-critique \"<why>\")" % d.name)
+            die("no critique yet. Run: python -m capitan critique %s  (or --skip-critique \"<why>\")" % d.name)
         v = verdict(read(crit))
         if not v:
             die("critique.md has no 'VERDICT: READY' or 'VERDICT: REVISE' line")
@@ -651,7 +651,7 @@ def cmd_approve(a):
             die("critique verdict is REVISE. Address it and re-run critique, or approve with --skip-critique \"<why>\"")
         h = d / ".critique-hash"
         if not h.exists() or read(h).strip() != plan_hash(d):
-            die("the plan changed after it was critiqued. Re-run: python -m forethought critique %s" % d.name)
+            die("the plan changed after it was critiqued. Re-run: python -m capitan critique %s" % d.name)
     text = read(path)
     data["status"] = "approved"
     data["approved"] = today()
@@ -704,7 +704,7 @@ def cmd_move(a):
                 and (load_plan(plan_file(x))[1] or {}).get("tier") != "epic"]
         if len(busy) >= limit:
             die("%d changes are already in progress (%s); the limit is %d. Finish or drop one first, or raise "
-                "max_in_progress in forethought/config.json. Fewer open streams = fewer forgotten branches."
+                "max_in_progress in capitan/config.json. Fewer open streams = fewer forgotten branches."
                 % (len(busy), ", ".join(busy), limit))
     if a.status == "dropped" and in_git() and not getattr(a, "abandon_knowledge", None):
         at_risk = []
@@ -712,7 +712,7 @@ def cmd_move(a):
             at_risk += ["%s: %s" % (b, item) for item in knowledge_at_risk(b)]
         if at_risk:
             die("these exist only on the change's branch and would be stranded:\n  " + "\n  ".join(at_risk)
-                + "\nRescue them onto %s first:  python -m forethought rescue %s\n"
+                + "\nRescue them onto %s first:  python -m capitan rescue %s\n"
                   "(or drop with --abandon-knowledge \"<why>\")" % (short_branch(base_branch()), d.name))
     if a.status == "dropped" and getattr(a, "abandon_knowledge", None):
         data["knowledge_abandoned"] = a.abandon_knowledge
@@ -782,7 +782,7 @@ def cmd_status(a):
                 risky.append("%s (%d)" % (b, len(facts["risk"])))
         if risky:
             shown = ", ".join(risky[:5]) + (" and %d more" % (len(risky) - 5) if len(risky) > 5 else "")
-            print("knowledge not on %s yet: %s   -> forethought branches / rescue" % (base, shown))
+            print("knowledge not on %s yet: %s   -> capitan branches / rescue" % (base, shown))
         print("")
     if not dirs:
         print("no changes yet")
@@ -806,14 +806,14 @@ def insert_between(path, start, end, line):
 def cmd_park(a):
     p = ROOT / "ROADMAP.md"
     if not p.exists():
-        die("ROADMAP.md is missing. Restore it from forethought (init does not overwrite) or create it with the markers.")
+        die("ROADMAP.md is missing. Restore it from capitan (init does not overwrite) or create it with the markers.")
     src = ""
     if a.source:
         found = find_change(a.source, required=False)
         if not found:
             print("warning: no change '%s' in changes/; recording it as given" % a.source, file=sys.stderr)
         src = " (from %s)" % (found.name if found else a.source)
-    insert_between(p, "<!-- forethought:parking:start -->", "<!-- forethought:parking:end -->",
+    insert_between(p, "<!-- capitan:parking:start -->", "<!-- capitan:parking:end -->",
                    "- %s %s%s" % (today(), a.idea, src))
     print("parked. It is out of the current change's scope.")
 
@@ -821,7 +821,7 @@ def cmd_park(a):
 def cmd_learn(a):
     p = ROOT / "LESSONS.md"
     if not p.exists():
-        die("LESSONS.md is missing. Re-run init from the forethought repo to restore it.")
+        die("LESSONS.md is missing. Re-run init from the capitan repo to restore it.")
     nums = [int(l["id"][2:]) for l in lessons_all()]
     lid = "L-%03d" % ((max(nums) + 1) if nums else 1)
     areas = ", ".join(x.strip() for x in a.area.split(",") if x.strip())
@@ -872,7 +872,7 @@ def in_git():
 
 
 def current_branch():
-    for env in ("FORETHOUGHT_BRANCH", "GITHUB_HEAD_REF", "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"):
+    for env in ("CAPITAN_BRANCH", "GITHUB_HEAD_REF", "CI_MERGE_REQUEST_SOURCE_BRANCH_NAME"):
         if os.environ.get(env):
             return os.environ[env]
     r = git("rev-parse", "--abbrev-ref", "HEAD")
@@ -887,8 +887,8 @@ def current_branch():
 
 
 def base_branch(explicit=None):
-    """--base, else FORETHOUGHT_BASE, else config base_branch, else detected: origin's default, main, master."""
-    name = explicit or os.environ.get("FORETHOUGHT_BASE") or config()["base_branch"]
+    """--base, else CAPITAN_BASE, else config base_branch, else detected: origin's default, main, master."""
+    name = explicit or os.environ.get("CAPITAN_BASE") or config()["base_branch"]
     if name:
         return name
     if "base" in _BASE:  # detection costs several git calls; do it once per run
@@ -918,7 +918,7 @@ def merge_base(base=None):
     r = git("merge-base", base, "HEAD")
     if r.returncode != 0:
         die("cannot find the merge base with '%s'. Pass --base <branch> or set base_branch in "
-            "forethought/config.json" % base)
+            "capitan/config.json" % base)
     return r.stdout.strip()
 
 
@@ -970,7 +970,7 @@ def matches(path, patterns):
     return False
 
 
-TOOL_NOISE = ("forethought/__pycache__/**", "forethought/gate-log.jsonl", "forethought/cache.json", "**/*.pyc")
+TOOL_NOISE = ("capitan/__pycache__/**", "capitan/gate-log.jsonl", "capitan/cache.json", "**/*.pyc")
 
 
 def code_only(files):
@@ -1000,7 +1000,7 @@ def reviewable(files):
 
 
 def governance_token():
-    p = git("rev-parse", "--git-path", "forethought-governance-ok").stdout.strip()
+    p = git("rev-parse", "--git-path", "capitan-governance-ok").stdout.strip()
     return (Path(p) if Path(p).is_absolute() else ROOT / p) if p else None
 
 
@@ -1017,7 +1017,7 @@ def governance_allowed():
 
 
 def cmd_allow_governance(a):
-    """Human-only: allow changes to forethought's own rules (config, hooks, CI) for the next 30 minutes, locally."""
+    """Human-only: allow changes to capitan's own rules (config, hooks, CI) for the next 30 minutes, locally."""
     if not in_git():
         die("allow-governance needs a git repository")
     tok = governance_token()
@@ -1029,8 +1029,8 @@ def cmd_allow_governance(a):
 
 
 def active_change():
-    """The change this work belongs to: FORETHOUGHT_CHANGE, else the branch name, else the only one in progress."""
-    env = os.environ.get("FORETHOUGHT_CHANGE")
+    """The change this work belongs to: CAPITAN_CHANGE, else the branch name, else the only one in progress."""
+    env = os.environ.get("CAPITAN_CHANGE")
     if env:
         return find_change(env, required=False)
     branch = current_branch()
@@ -1061,7 +1061,7 @@ def code_fingerprint(files):
 
 def gate_log(entry):
     try:
-        with open(ROOT / "forethought" / "gate-log.jsonl", "a", encoding="utf-8") as fh:
+        with open(ROOT / "capitan" / "gate-log.jsonl", "a", encoding="utf-8") as fh:
             fh.write(json.dumps(dict(entry, ts=datetime.datetime.now().isoformat(timespec="seconds"))) + "\n")
     except OSError:
         pass
@@ -1076,12 +1076,12 @@ def gate_eval(files, ci=False, base=None, statuses=None):
     if gov:
         statuses = statuses or {}
         rewrites = [f for f in gov if statuses.get(f, "M") != "A"]  # adding the rules (setup) is fine; changing them is not
-        if ci and os.environ.get("FORETHOUGHT_ALLOW_GOVERNANCE", "").lower() not in ("1", "true", "yes"):
-            errs.append("this PR changes forethought's own rules (%s). A human must review it and add the "
-                        "'governance-approved' label (which sets FORETHOUGHT_ALLOW_GOVERNANCE)." % ", ".join(gov))
+        if ci and os.environ.get("CAPITAN_ALLOW_GOVERNANCE", "").lower() not in ("1", "true", "yes"):
+            errs.append("this PR changes capitan's own rules (%s). A human must review it and add the "
+                        "'governance-approved' label (which sets CAPITAN_ALLOW_GOVERNANCE)." % ", ".join(gov))
         elif not ci and rewrites and not governance_allowed():
-            errs.append("this changes forethought's own rules (%s). Only a human may: run "
-                        "python -m forethought allow-governance (valid %d minutes), then retry."
+            errs.append("this changes capitan's own rules (%s). Only a human may: run "
+                        "python -m capitan allow-governance (valid %d minutes), then retry."
                         % (", ".join(rewrites), GOVERNANCE_MINUTES))
         else:
             warns.append(GOVERNANCE_WARNING % ", ".join(gov))
@@ -1097,13 +1097,13 @@ def gate_eval(files, ci=False, base=None, statuses=None):
             return None, errs, warns
         if branch == "HEAD":
             errs.append("code changes (%s) on a detached HEAD. Switch to the change's branch "
-                        "(git switch change/<id>), or set FORETHOUGHT_BRANCH=change/<id> if you must stay detached."
+                        "(git switch change/<id>), or set CAPITAN_BRANCH=change/<id> if you must stay detached."
                         % shown)
             return None, errs, warns
     d = active_change()
     if not d:
         errs.append("code changes (%s) but no active change. Plan one (new -> critique -> approve -> start) and "
-                    "work on a branch named change/<id>, or set FORETHOUGHT_CHANGE." % shown)
+                    "work on a branch named change/<id>, or set CAPITAN_CHANGE." % shown)
         return None, errs, warns
     data, perrs = check_plan(d)
     if perrs:
@@ -1194,37 +1194,37 @@ def cmd_gate(a):
     print("gate: ok" + (" (%s)" % d.name if d else " (planning files only)"))
 
 
-HOOK_MARK = "# forethought gate"
+HOOK_MARK = "# capitan gate"
 
 
 def cmd_hooks(a):
     if not in_git():
         die("not a git repository")
-    line = 'python -m forethought gate --staged   (run from %s)' % ROOT
+    line = 'python -m capitan gate --staged   (run from %s)' % ROOT
     custom = git("config", "--get", "core.hooksPath").stdout.strip()
     if custom:
-        die("this repo uses core.hooksPath=%s (husky or a shared hooks folder), so forethought will not write "
+        die("this repo uses core.hooksPath=%s (husky or a shared hooks folder), so capitan will not write "
             "there. Add this line to that folder's pre-commit hook (with husky: .husky/pre-commit):\n  %s"
             % (custom, line))
     hooks = Path(git("rev-parse", "--git-path", "hooks").stdout.strip())
     hooks = hooks if hooks.is_absolute() else ROOT / hooks
     hook = hooks / "pre-commit"
     top = Path(git("rev-parse", "--show-toplevel").stdout.strip()).resolve()
-    rel = ROOT.resolve().relative_to(top).as_posix()  # forethought may live in a monorepo subfolder
-    # one line per forethought project, in a subshell, so several projects in one monorepo share the hook
+    rel = ROOT.resolve().relative_to(top).as_posix()  # capitan may live in a monorepo subfolder
+    # one line per capitan project, in a subshell, so several projects in one monorepo share the hook
     # a project that was removed (folder or cli.py gone) skips itself instead of blocking every commit
-    # The hook judges with the LAST COMMITTED rules (git archive HEAD:./forethought), so staging an edit to
-    # forethought itself can't switch the gate off. First commit (nothing at HEAD yet): the working copy.
+    # The hook judges with the LAST COMMITTED rules (git archive HEAD:./capitan), so staging an edit to
+    # capitan itself can't switch the gate off. First commit (nothing at HEAD yet): the working copy.
     py = sys.executable.replace("\\", "/")
-    gate_line = ('(cd "$(git rev-parse --show-toplevel)/%s" 2>/dev/null && [ -f forethought/cli.py ] || exit 0; '
-                 't=$(mktemp -d); mkdir -p "$t/forethought"; '
-                 'if git archive HEAD:./forethought 2>/dev/null | tar -x -C "$t/forethought" 2>/dev/null '
-                 '&& [ -f "$t/forethought/cli.py" ]; then FORETHOUGHT_ROOT="$PWD" "%s" "$t/forethought/cli.py" gate --staged; '
-                 'else "%s" -m forethought gate --staged; fi; r=$?; rm -rf "$t"; exit $r) || exit 1\n'
+    gate_line = ('(cd "$(git rev-parse --show-toplevel)/%s" 2>/dev/null && [ -f capitan/cli.py ] || exit 0; '
+                 't=$(mktemp -d); mkdir -p "$t/capitan"; '
+                 'if git archive HEAD:./capitan 2>/dev/null | tar -x -C "$t/capitan" 2>/dev/null '
+                 '&& [ -f "$t/capitan/cli.py" ]; then CAPITAN_ROOT="$PWD" "%s" "$t/capitan/cli.py" gate --staged; '
+                 'else "%s" -m capitan gate --staged; fi; r=$?; rm -rf "$t"; exit $r) || exit 1\n'
                  % ("" if rel == "." else rel, py, py))
     if hook.exists() and HOOK_MARK not in read(hook):
-        die("%s already exists and is not ours. Add this line to it yourself:\n  python -m forethought gate --staged" % hook)
-    existing = read(hook) if hook.exists() else "#!/bin/sh\n%s (installed by: python -m forethought hooks)\n" % HOOK_MARK
+        die("%s already exists and is not ours. Add this line to it yourself:\n  python -m capitan gate --staged" % hook)
+    existing = read(hook) if hook.exists() else "#!/bin/sh\n%s (installed by: python -m capitan hooks)\n" % HOOK_MARK
     if gate_line not in existing:
         existing = existing.rstrip("\n") + "\n" + gate_line
     write(hook, existing)
@@ -1320,7 +1320,7 @@ def cmd_review(a):
     if a.print or not cmd:
         print(prompt)
         if not a.print:
-            print("\n[forethought] No agent_cmd set. Give the prompt above to a FRESH agent session and save its "
+            print("\n[capitan] No agent_cmd set. Give the prompt above to a FRESH agent session and save its "
                   "reply to changes/%s/review.md" % d.name, file=sys.stderr)
         return
     r = subprocess.run(cmd, shell=True, input=prompt, capture_output=True, text=True, encoding="utf-8")
@@ -1391,7 +1391,7 @@ def build_pr(d, data, text, base=None):
     gov = governance_only(files)
     if gov:
         out += ["", "## Governance files changed (review these first)",
-                "These change the rules forethought and the agents follow:"] + ["- `%s`" % f for f in gov]
+                "These change the rules capitan and the agents follow:"] + ["- `%s`" % f for f in gov]
     out += ["", "## Data impact", secs.get("data impact", "-"), "", "## Risks", secs.get("risks", "-"), ""]
     roadmap = read(ROOT / "ROADMAP.md") if (ROOT / "ROADMAP.md").exists() else ""
     parked = [l for l in roadmap.splitlines() if "(from %s)" % d.name in l]
@@ -1420,7 +1420,7 @@ def cmd_pr(a):
     body = build_pr(d, data, text, a.base)
     write(d / "pr.md", body)
     print(body)
-    print("\n[forethought] saved to changes/%s/pr.md  (e.g. gh pr create --body-file changes/%s/pr.md)" % (d.name, d.name),
+    print("\n[capitan] saved to changes/%s/pr.md  (e.g. gh pr create --body-file changes/%s/pr.md)" % (d.name, d.name),
           file=sys.stderr)
 
 
@@ -1431,7 +1431,7 @@ def close_checks(d, data, a):
     probs = []
     learned = any(("Source: %s" % d.name) in l["body"] for l in lessons_all())
     if not learned and not a.no_lessons:
-        probs.append("record what this change taught you: python -m forethought learn \"<title>\" --area <a> "
+        probs.append("record what this change taught you: python -m capitan learn \"<title>\" --area <a> "
                      "--body \"...\"  (or finish with --no-lessons \"<why>\")")
     if a.no_lessons:
         data["no_lessons"] = a.no_lessons
@@ -1447,7 +1447,7 @@ def close_checks(d, data, a):
     else:
         rv = d / "review.md"
         if not rv.exists():
-            probs.append("no code review yet: python -m forethought review %s  (or --skip-review \"<why>\")" % d.name)
+            probs.append("no code review yet: python -m capitan review %s  (or --skip-review \"<why>\")" % d.name)
         else:
             overall, per = review_result(read(rv))
             if overall != "PASS":
@@ -1521,7 +1521,7 @@ def cmd_feature(a):
     folder.mkdir(parents=True, exist_ok=True)
     write(readme, read(HERE / "templates" / "feature-README.md").replace("__NAME__", folder.name))
     if not any(glob_re(p).match(Path(a.path).as_posix().strip("/")) for p in config()["feature_dirs"]):
-        print("note: %s does not match feature_dirs in forethought/config.json, so map and tidy won't list it "
+        print("note: %s does not match feature_dirs in capitan/config.json, so map and tidy won't list it "
               "as a feature" % a.path, file=sys.stderr)
     print("created %s/README.md: fill in Purpose, Entry point, Owns, Depends on" % a.path)
 
@@ -1552,7 +1552,7 @@ def cmd_map(a):
     files = project_files()
     feats = feature_dirs(files)
     lines = ["# Project map", "",
-             "Generated by `python -m forethought map` on %s. Do not edit; run it again. "
+             "Generated by `python -m capitan map` on %s. Do not edit; run it again. "
              "Where things go: see `AGENTS.md`." % today(), ""]
     lines += ["## Features", ""]
     if feats:
@@ -1563,7 +1563,7 @@ def cmd_map(a):
             lines.append("| `%s/` | %s | %s | %s |" % (f, purpose,
                                                       readme_field(f, "Owns") or "-", readme_field(f, "Entry point") or "-"))
     else:
-        lines.append("No feature folders yet (feature_dirs in forethought/config.json: %s)." % ", ".join(config()["feature_dirs"]))
+        lines.append("No feature folders yet (feature_dirs in capitan/config.json: %s)." % ", ".join(config()["feature_dirs"]))
     lines += ["", "## Folders", ""]
     counts = {}
     for f in files:
@@ -1605,7 +1605,7 @@ def new_features_without_readme(files):
             continue
         readme = ROOT / d / "README.md"
         if not readme.exists():
-            missing.append((d, "has no README.md (python -m forethought feature %s)" % d))
+            missing.append((d, "has no README.md (python -m capitan feature %s)" % d))
         elif re.search(r"\bTODO:", read(readme)):
             missing.append((d, "README.md still has TODO: placeholders; fill in what the folder is for"))
     return missing
@@ -1656,12 +1656,12 @@ def git_show_bytes(ref, rel):
 
 
 def parking_lines(text):
-    m = re.search(r"<!-- forethought:parking:start -->(.*?)<!-- forethought:parking:end -->", text or "", re.S)
+    m = re.search(r"<!-- capitan:parking:start -->(.*?)<!-- capitan:parking:end -->", text or "", re.S)
     return [l.strip() for l in (m.group(1) if m else "").splitlines() if l.strip().startswith("- ")]
 
 
 def lesson_key(l):
-    """A lesson is the same lesson when title and body match (ignoring the lines forethought adds later)."""
+    """A lesson is the same lesson when title and body match (ignoring the lines capitan adds later)."""
     body = "\n".join(x for x in l["body"].splitlines() if not re.match(r"^(Enforced by|Scope):", x))
     return l["title"].strip().lower() + "\n" + re.sub(r"\s+", " ", body).strip()
 
@@ -1741,7 +1741,7 @@ def branch_facts(branch, tip, base, base_tip):
     key = "%s|%s|%s" % (tip, base_tip, settings)  # a config change recomputes everything
     store = _CACHE.setdefault("facts", None)
     if store is None:
-        p = ROOT / "forethought" / "cache.json"
+        p = ROOT / "capitan" / "cache.json"
         try:
             store = json.loads(read(p)) if p.exists() else {}
         except (ValueError, OSError):
@@ -1792,7 +1792,7 @@ def branch_facts(branch, tip, base, base_tip):
     facts = {"key": key, "change": d.name if d else None, "status": status, "risk": risk, "all_on_base": all_in}
     store[branch] = facts
     try:
-        write(ROOT / "forethought" / "cache.json", json.dumps(store))
+        write(ROOT / "capitan" / "cache.json", json.dumps(store))
     except OSError:
         pass
     return facts
@@ -1922,8 +1922,8 @@ def cmd_rescue(a):
             have_lines = set(parking_lines(read(ROOT / "ROADMAP.md")))
             for line in parking_lines(git_show(b, "ROADMAP.md")):
                 if line not in have_lines:
-                    insert_between(ROOT / "ROADMAP.md", "<!-- forethought:parking:start -->",
-                                   "<!-- forethought:parking:end -->", line)
+                    insert_between(ROOT / "ROADMAP.md", "<!-- capitan:parking:start -->",
+                                   "<!-- capitan:parking:end -->", line)
                     done.append("parked idea: %s" % line[2:])
         for item in knowledge_at_risk(b):
             if not item.startswith("file "):
@@ -1987,7 +1987,7 @@ def cmd_tidy(a):
 
     files = project_files()
     feats = feature_dirs(files)
-    section("Feature folders without a README (python -m forethought feature <dir>)",
+    section("Feature folders without a README (python -m capitan feature <dir>)",
             ["%s/" % f for f in feats if not (ROOT / f / "README.md").exists()])
 
     areas = []
@@ -2004,7 +2004,7 @@ def cmd_tidy(a):
     unclaimed = []
     ignore = cfg["tidy_ignore"] + cfg["test_paths"]
     for cd in sorted(owners):
-        if cd.split("/")[0] in ("forethought",) or cd.startswith(".") or matches(cd + "/x", ignore):
+        if cd.split("/")[0] in ("capitan",) or cd.startswith(".") or matches(cd + "/x", ignore):
             continue
         if not any(matches(cd + "/x", [ar]) or re.split(r"[*?]", ar)[0].rstrip("/").startswith(cd + "/")
                    or re.split(r"[*?]", ar)[0].rstrip("/") == cd for ar in areas):
@@ -2042,14 +2042,14 @@ def cmd_tidy(a):
             shared_words = set(terms_from(l1["title"])) & set(terms_from(l2["title"]))
             if shared_area and len(shared_words) >= 2:
                 repeats.append("%s and %s look like the same lesson (%s): turn it into a check, then "
-                               "python -m forethought enforce <id> \"<check>\"" % (l1["id"], l2["id"], ", ".join(sorted(shared_words))))
+                               "python -m capitan enforce <id> \"<check>\"" % (l1["id"], l2["id"], ", ".join(sorted(shared_words))))
     section("Lessons that keep coming back", repeats)
     section("Lessons marked general (candidates for your personal harness, if they recur elsewhere)",
             ["%s %s" % (l["id"], l["title"]) for l in lessons if l["general"]])
 
     if in_git():
         brs = [r for r in branch_report() if not r["verdict"].startswith("active") or "stale" in r["verdict"]]
-        section("Branches needing a decision (details: python -m forethought branches)",
+        section("Branches needing a decision (details: python -m capitan branches)",
                 ["%s: %s" % (r["branch"], r["verdict"]) for r in brs])
 
     if not report:
@@ -2060,11 +2060,11 @@ def cmd_tidy(a):
         for it in items:
             print("- " + it)
         print("")
-    print("Run python -m forethought map to refresh docs/map.md.")
+    print("Run python -m capitan map to refresh docs/map.md.")
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(prog="forethought", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(prog="capitan", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("init"); s.add_argument("dir"); s.add_argument("--claude", action="store_true")
     s.add_argument("--owner", help="GitHub user or team (e.g. @you) who must approve changes to the rules (writes .github/CODEOWNERS)")

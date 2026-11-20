@@ -8,7 +8,7 @@ from pathlib import Path
 
 from test_cli import GOALS, SRC, filled_plan
 
-ADAPTER_HOOK = SRC.parents[1] / "adapters" / "claude-code" / "hooks" / "forethought_gate.py"
+ADAPTER_HOOK = SRC.parents[1] / "adapters" / "claude-code" / "hooks" / "capitan_gate.py"
 REVIEW_PASS = "VERDICT: PASS\nAC-1: PASS - test_checkout_creates_order passed\nFindings: none\nNot checked: nothing\n"
 
 
@@ -35,7 +35,7 @@ class GateTest(unittest.TestCase):
         return subprocess.run(["git"] + list(args), cwd=str(self.root), capture_output=True, text=True, encoding="utf-8")
 
     def ft(self, *args):
-        return subprocess.run([sys.executable, "-m", "forethought"] + list(args), cwd=str(self.root),
+        return subprocess.run([sys.executable, "-m", "capitan"] + list(args), cwd=str(self.root),
                               capture_output=True, text=True, encoding="utf-8")
 
     def put(self, rel, text="x = 1\n"):
@@ -44,7 +44,7 @@ class GateTest(unittest.TestCase):
         p.write_text(text, encoding="utf-8")
 
     def config(self, **kw):
-        p = self.root / "forethought" / "config.json"
+        p = self.root / "capitan" / "config.json"
         cfg = json.loads(p.read_text(encoding="utf-8"))
         cfg.update(kw)
         p.write_text(json.dumps(cfg), encoding="utf-8")
@@ -137,7 +137,7 @@ class GateTest(unittest.TestCase):
         self.assertNotIn("src/orders/a.py", r.stderr)
         self.config(scope_mode="block")
         self.assertEqual(self.ft("gate", "--staged").returncode, 1)
-        log = (self.root / "forethought" / "gate-log.jsonl").read_text(encoding="utf-8").strip().splitlines()
+        log = (self.root / "capitan" / "gate-log.jsonl").read_text(encoding="utf-8").strip().splitlines()
         self.assertGreaterEqual(len(log), 2)
         self.assertIn("outside the plan", json.loads(log[0])["warnings"][0])
 
@@ -223,7 +223,7 @@ class GateTest(unittest.TestCase):
     def test_ci_branch_detection_uses_ci_env_var(self):
         d = self.started_change(branch=False)
         self.put("src/orders/a.py")
-        r = subprocess.run([sys.executable, "-m", "forethought", "gate", "--base", "main"], cwd=str(self.root),
+        r = subprocess.run([sys.executable, "-m", "capitan", "gate", "--base", "main"], cwd=str(self.root),
                            capture_output=True, text=True, env=dict(__import__("os").environ, GITHUB_HEAD_REF="change/" + d.name))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn(d.name, r.stdout)
@@ -232,11 +232,11 @@ class GateTest(unittest.TestCase):
     def test_pycache_is_not_code(self):
         self.started_change(tier="quick")
         self.put("src/one.py")
-        self.ft("status")  # running the CLI may create forethought/__pycache__
+        self.ft("status")  # running the CLI may create capitan/__pycache__
         self.git("add", "-A")
         r = self.ft("gate", "--staged")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("forethought/__pycache__/", (self.root / ".gitignore").read_text(encoding="utf-8"))
+        self.assertIn("capitan/__pycache__/", (self.root / ".gitignore").read_text(encoding="utf-8"))
 
     def test_epic_carries_no_code(self):
         self.ft("new", "Billing", "--tier", "epic", "--objective", "O2")
@@ -323,25 +323,25 @@ class GateTest(unittest.TestCase):
         self.assertNotIn("Traceback", r.stderr)
         self.assertIn("outside the project", r.stderr)
 
-    def test_claude_hook_fails_open_when_forethought_is_broken(self):
-        (self.root / "forethought" / "config.json").write_text("{not json", encoding="utf-8")
+    def test_claude_hook_fails_open_when_capitan_is_broken(self):
+        (self.root / "capitan" / "config.json").write_text("{not json", encoding="utf-8")
         r = self.run_hook("src/app.py")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("failed unexpectedly", r.stderr)
-        self.assertEqual(self.run_hook("forethought/config.json").returncode, 0)
+        self.assertEqual(self.run_hook("capitan/config.json").returncode, 0)
 
     # --- Claude Code adapter hook ---
     def run_hook(self, rel):
         event = {"tool_name": "Write", "tool_input": {"file_path": str(self.root / rel)}, "cwd": str(self.root)}
         env = dict(__import__("os").environ, CLAUDE_PROJECT_DIR=str(self.root))  # as Claude Code sets it
-        return subprocess.run([sys.executable, str(self.root / ".claude" / "hooks" / "forethought_gate.py")],
+        return subprocess.run([sys.executable, str(self.root / ".claude" / "hooks" / "capitan_gate.py")],
                               input=json.dumps(event), capture_output=True, text=True, cwd=str(self.root), env=env)
 
     def test_claude_hook_uses_project_dir_not_the_session_folder(self):
         event = {"tool_name": "Write", "tool_input": {"file_path": str(self.root / ".claude" / "settings.local.json")},
                  "cwd": str(self.root / "src")}  # the session cd'd into a subfolder
         env = dict(__import__("os").environ, CLAUDE_PROJECT_DIR=str(self.root))
-        r = subprocess.run([sys.executable, str(self.root / ".claude" / "hooks" / "forethought_gate.py")],
+        r = subprocess.run([sys.executable, str(self.root / ".claude" / "hooks" / "capitan_gate.py")],
                            input=json.dumps(event), capture_output=True, text=True, cwd=str(self.root), env=env)
         self.assertEqual(r.returncode, 2, r.stderr)
 
@@ -349,7 +349,7 @@ class GateTest(unittest.TestCase):
         for p in (".Claude/settings.local.json", ".claude /settings.local.json", "src/../.CLAUDE/x.json"):
             r = self.ft("gate", "--paths", p)
             self.assertEqual(r.returncode, 1, "%s: %s" % (p, r.stderr))
-        tok = self.root / ".git" / "forethought-governance-ok"
+        tok = self.root / ".git" / "capitan-governance-ok"
         tok.write_text("2099-01-01T00:00:00\n", encoding="utf-8")  # a token from the future
         self.assertEqual(self.ft("gate", "--paths", ".claude/x.json").returncode, 1)
 
@@ -368,7 +368,7 @@ if __name__ == "__main__":
 
 
 class MonorepoAndBaseTest(unittest.TestCase):
-    """forethought installed in a monorepo subfolder, and repos whose base branch is not 'main'."""
+    """capitan installed in a monorepo subfolder, and repos whose base branch is not 'main'."""
 
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -387,7 +387,7 @@ class MonorepoAndBaseTest(unittest.TestCase):
         return subprocess.run(["git"] + list(args), cwd=str(self.top), capture_output=True, text=True, encoding="utf-8")
 
     def ft(self, *args):
-        return subprocess.run([sys.executable, "-m", "forethought"] + list(args), cwd=str(self.root),
+        return subprocess.run([sys.executable, "-m", "capitan"] + list(args), cwd=str(self.root),
                               capture_output=True, text=True, encoding="utf-8")
 
     def repo(self, base="main"):
@@ -459,7 +459,7 @@ class MonorepoAndBaseTest(unittest.TestCase):
         r = subprocess.run([sys.executable, str(SRC), "init", str(second)], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.ft("hooks").returncode, 0)
-        r = subprocess.run([sys.executable, "-m", "forethought", "hooks"], cwd=str(second), capture_output=True, text=True)
+        r = subprocess.run([sys.executable, "-m", "capitan", "hooks"], cwd=str(second), capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         hook = (self.top / ".git" / "hooks" / "pre-commit").read_text(encoding="utf-8")
         self.assertIn("/apps/web\"", hook)

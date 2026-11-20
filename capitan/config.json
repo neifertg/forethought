@@ -12,7 +12,7 @@
   "parked_stale_days": 60,
   "feature_dirs": ["src/features/*", "features/*", "apps/*", "packages/*", "services/*", "modules/*"],
   "planning_paths": ["changes/**", "GOALS.md", "ROADMAP.md", "LESSONS.md", "AGENTS.md", "CLAUDE.md", "README.md", "**/README.md", "docs/**", "research/**/*.md"],
-  "governance_paths": ["forethought/**", ".claude/**", ".github/**", ".gitignore"],
+  "governance_paths": ["capitan/**", ".claude/**", ".github/**", ".gitignore"],
   "keep_branches": ["main", "master", "develop", "dev", "staging", "production", "release/*", "hotfix/*"],
   "tidy_ignore": ["tests/**", "test/**", "scripts/**", "infra/**", "tools/**", ".github/**"],
   "schema_paths": ["**/migrations/**", "**/schema.prisma", "**/schema.sql", "**/*.sql", "**/models.py", "**/models/**"],

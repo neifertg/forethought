@@ -1,6 +1,6 @@
 # Goals
 
-Filled in by the kickoff interview (`forethought/playbooks/kickoff.md`). Every standard change names one objective below; work that serves none of them waits.
+Filled in by the kickoff interview (`capitan/playbooks/kickoff.md`). Every standard change names one objective below; work that serves none of them waits.
 
 ## Objectives
 Outcomes, not tasks, ranked: when two conflict, the higher one wins.

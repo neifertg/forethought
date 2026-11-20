@@ -26,5 +26,5 @@ TODO: what this epic deliberately leaves out. Park it.
 ## Relevant lessons
 __LESSONS__
 
-Each child becomes its own standard change (python -m forethought new "<child title>" --tier standard ...).
+Each child becomes its own standard change (python -m capitan new "<child title>" --tier standard ...).
 Children with no unmet depends_on can run in parallel, one branch/worktree each.

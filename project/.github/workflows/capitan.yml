@@ -1,6 +1,6 @@
-# forethought merge gate. Any CI works the same way: run the BASE branch's copy of forethought against the PR.
+# capitan merge gate. Any CI works the same way: run the BASE branch's copy of capitan against the PR.
 # Make it count: protect your main branch so this check must pass and nobody pushes to main directly.
-name: forethought
+name: capitan
 
 on:
   pull_request:
@@ -20,21 +20,21 @@ jobs:
           python-version: "3.12"
 
       # The rules come from the base branch, so a PR can't change the rules it is judged by.
-      # (First PR that adds forethought: there are no base rules yet, so it uses its own.)
+      # (First PR that adds capitan: there are no base rules yet, so it uses its own.)
       - name: Load the base branch's rules
         run: |
-          mkdir -p "$RUNNER_TEMP/rules/forethought"
-          if ! git archive "origin/${{ github.base_ref }}:./forethought" | tar -x -C "$RUNNER_TEMP/rules/forethought"; then
-            cp -r forethought/. "$RUNNER_TEMP/rules/forethought/"
+          mkdir -p "$RUNNER_TEMP/rules/capitan"
+          if ! git archive "origin/${{ github.base_ref }}:./capitan" | tar -x -C "$RUNNER_TEMP/rules/capitan"; then
+            cp -r capitan/. "$RUNNER_TEMP/rules/capitan/"
           fi
 
       - name: Change is planned, finished, reviewed on this exact code, and in budget
         env:
-          FORETHOUGHT_ROOT: ${{ github.workspace }}
-          FORETHOUGHT_BRANCH: ${{ github.head_ref }}
-          # Changes to forethought's own rules need a human: add the 'governance-approved' label to the PR.
-          FORETHOUGHT_ALLOW_GOVERNANCE: ${{ contains(github.event.pull_request.labels.*.name, 'governance-approved') }}
-        run: python "$RUNNER_TEMP/rules/forethought/cli.py" gate --ci --base origin/${{ github.base_ref }}
+          CAPITAN_ROOT: ${{ github.workspace }}
+          CAPITAN_BRANCH: ${{ github.head_ref }}
+          # Changes to capitan's own rules need a human: add the 'governance-approved' label to the PR.
+          CAPITAN_ALLOW_GOVERNANCE: ${{ contains(github.event.pull_request.labels.*.name, 'governance-approved') }}
+        run: python "$RUNNER_TEMP/rules/capitan/cli.py" gate --ci --base origin/${{ github.base_ref }}
 
       # Add your own build and tests here, e.g.
       # - name: Tests
